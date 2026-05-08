@@ -1,0 +1,3 @@
+com\example\personnes\presentation\security\JsonAuthenticationEntryPoint.class
+com\example\personnes\presentation\security\JsonAccessDeniedHandler.class
+com\example\personnes\presentation\security\SecurityErrorAttributes.class

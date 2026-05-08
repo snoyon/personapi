@@ -1,0 +1,162 @@
+Je voudrais avoir une API en java utilisant SpringBoot avec 4 couches : présentation (api), application, domain et infrastructure (accès à la base de données).
+Cette API doit permettre de récupérer les informations d'une personne avec GET /personnes/<idPerson>?data=<family1>,<family2>, ... avec <family> qui correspond à un code permettant d'identifier une famille de données :
+1 pour l'identité de la personne (nom, prénom), 2 pour ses coordonnées (email, téléphone, adresse postale), 3 pour ses revenus (salaire mensuel).
+
+Je voudrais pouvoir identifier l'appelant de l'API au moyen d'un header  HTPP "ClientId"  (qui sera passé de manière sécurisée par l'API manager en amont de mon API). Ce header contiendra une chaîne de caractère permettant d'identifier de manière unique l'appelant. Est-ce que tu peux l'ajotuter ?
+
+Je voudrais avoir un fichier de paramétrage (yaml ou autre) permettant de décrire les droits d'accès aux familles de données par appelant (clientId) et utiliser SpringSecurity pour contrôler les droits.
+
+Je ne connais pas SpringSecurity, est-ce que tu peux m'expliquer le code pour que je comprenne comment ça marche ?
+En particulier je ne vois pas comment tu fais la correspondance entre entre le nom du client (client-mobile) dans le fichier de configuration et le clientId reçu.
+
+Oui. Le lien entre client-mobile dans le YAML et le header HTTP ClientId se fait en deux étapes très simples.
+1. Le header devient l’identité Spring Security
+Dans ClientIdAuthenticationFilter.java, on lit le header :
+String clientId = request.getHeader(CLIENT_ID_HEADER);
+Avec :
+static final String CLIENT_ID_HEADER = "ClientId";
+
+Donc si l’appel HTTP contient :
+ClientId: client-mobile
+alors clientId vaut "client-mobile".
+
+Ensuite, le filtre crée une authentification Spring Security :
+UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken( clientId.trim(), null, List.of() );
+
+Le point important est le premier argument :
+clientId.trim()
+C’est le nom de l’utilisateur authentifié pour Spring Security. Dans notre cas, ce n’est pas un utilisateur humain, c’est l’appelant API.
+
+Puis on le stocke dans le contexte Spring Security :
+SecurityContextHolder.getContext().setAuthentication(authentication);
+À partir de là, Spring Security considère que l’appel courant est identifié sous le nom "client-mobile".
+
+2. Spring Security compare ce nom avec le YAML
+Dans PersonneDataAuthorizationManager.java, on récupère cette identité :
+Authentication authentication = authenticationSupplier.get(); String clientId = authentication.getName();
+Ici :
+authentication.getName()
+renvoie "client-mobile", car c’est ce qu’on avait mis dans le UsernamePasswordAuthenticationToken.
+Ensuite, on cherche ce client dans la configuration :
+ClientAccessProperties.ClientAccess clientAccess = clientAccessProperties.getClients().get(clientId);
+Donc concrètement, ça revient à faire :
+clients.get("client-mobile")
+Et ça tombe sur cette partie du YAML :
+personnes-api: security: clients: client-mobile: familles-autorisees: - "1" - "2" - "3"
+La correspondance est donc directe : la valeur du header ClientId doit être exactement égale à une clé sous personnes-api.security.clients.
+Le flux complet
+Pour cet appel :
+curl -H "ClientId: client-mobile" \ "http://localhost:8080/personnes/1?data=1,3"
+
+Il se passe ceci :
+1. ClientIdAuthenticationFilter lit ClientId.
+2. Il met "client-mobile" comme identité Spring Security.
+3. SecurityConfiguration dit que /personnes/** doit passer par PersonneDataAuthorizationManager.
+4. PersonneDataAuthorizationManager récupère authentication.getName(), donc "client-mobile".
+5. Il cherche client-mobile dans le YAML.
+6. Il lit les familles autorisées : 1, 2, 3.
+7. Il lit les familles demandées dans data=1,3.
+8. Il vérifie que 1 et 3 sont bien dans les familles autorisées.
+9. Si oui : l’appel continue vers le contrôleur.
+10. Sinon : Spring Security retourne 403 Forbidden.
+
+Petit détail important
+Dans SecurityConfiguration.java, cette ligne branche notre filtre dans Spring Security :
+.addFilterBefore(new ClientIdAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
+
+Et celle-ci branche le contrôle d’accès :
+.requestMatchers("/personnes/**").access(personneDataAuthorizationManager)
+
+Donc le filtre identifie le client, puis l’AuthorizationManager décide s’il a le droit d’accéder aux familles demandées.
+
+
+Merci c'est plus clair. Il y a encore quelque chose que je ne comprends pas : comment se fait le mapping vers le code de retour http 401 quand le clientId n'est pas connu et 403 quand il n'a pas le droit d'accèder à la famille ?
+
+Bonne question, et il y a une nuance importante : dans le code actuel, on a bien :
+401 quand le header ClientId est absent ou vide
+403 quand le header ClientId est présent mais que le client est inconnu
+403 quand le client est connu mais n’a pas le droit sur une famille
+Donc un ClientId inconnu donne actuellement 403, pas 401.
+
+Pourquoi ?
+Dans ClientIdAuthenticationFilter.java, dès qu’un header ClientId non vide existe, on crée une authentification Spring Security :
+new UsernamePasswordAuthenticationToken(clientId.trim(), null, List.of())
+Donc avec :
+ClientId: client-inconnu
+Spring Security considère que la requête est authentifiée sous le nom client-inconnu.
+Ensuite, dans PersonneDataAuthorizationManager.java, on cherche le client dans la config :
+ClientAccessProperties.ClientAccess clientAccess = clientAccessProperties.getClients().get(clientId);
+Si le client n’existe pas :
+if (clientAccess == null) { return new AuthorizationDecision(false); }
+Cette ligne veut dire : “l’utilisateur est identifié, mais il n’est pas autorisé”.
+Spring Security traduit donc ça en :
+403 Forbidden
+D’où vient le 401 ?
+Le 401 vient de SecurityConfiguration.java :
+.exceptionHandling(exceptionHandling -> exceptionHandling .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+Cette configuration dit à Spring Security :
+si la requête n’est pas authentifiée, retourne 401 Unauthorized.
+Et comme on a aussi :
+.anonymous(anonymous -> anonymous.disable())
+une requête sans ClientId ne reçoit pas d’identité anonyme. Elle reste donc non authentifiée, ce qui donne 401.
+Résumé
+Cas
+Ce que voit Spring Security
+Code HTTP
+Pas de ClientId
+Non authentifié
+401
+ClientId vide
+Non authentifié
+401
+ClientId: client-inconnu
+Authentifié mais refusé
+403
+ClientId connu, famille interdite
+Authentifié mais refusé
+403
+ClientId connu, familles autorisées
+Autorisé
+200
+La règle générale Spring Security est :
+401 = je ne sais pas qui tu es 403 = je sais qui tu es, mais tu n’as pas le droit
+Ici, on considère qu’un ClientId présent identifie l’appelant, même s’il n’est pas déclaré dans notre fichier de droits. C’est pour ça que client-inconnu donne 403.
+19 h 05
+OK, c'est clair. La gestion de la sécurité se fait au niveau de la couche presentation, est-ce que ce ne serait pas mieux de la faire dans la couche application (ne modifie pas encore le code stp) ?
+19 h 08
+Oui, très bonne question. Et la réponse courte est : ça dépend de ce qu’on appelle “sécurité”.
+Dans ton cas, je garderais probablement une séparation en deux niveaux :
+Dans la couche présentation / infrastructure web
+C’est le bon endroit pour gérer les aspects HTTP et Spring Security :
+lire le header ClientId
+transformer ce header en identité Spring Security
+produire les codes HTTP 401 / 403
+brancher les filtres Spring Security
+protéger les routes /personnes/**
+Tout ça est très lié au protocole HTTP et au framework Spring Security. Le mettre dans l’application rendrait la couche application dépendante de détails techniques web, ce qu’on cherche justement à éviter avec une architecture en couches.
+Dans la couche application
+C’est le bon endroit pour exprimer une règle métier ou applicative du type :
+“tel appelant peut accéder à telle famille de données”
+Cette règle n’est pas fondamentalement HTTP. Elle pourrait aussi s’appliquer si demain tu exposes le même cas d’usage via Kafka, batch, gRPC, GraphQL, etc.
+Donc on pourrait avoir dans l’application quelque chose comme :
+personneApplicationService.recupererPersonne(appelant, idPersonne, familles)
+et le service ferait :
+controleAcces.verifierDroits(appelant, familles);
+avec un port applicatif/domain du style :
+interface ControleAccesFamilles { void verifierDroits(AppelantApi appelant, Set<FamilleDonnees> familles); }
+Puis l’implémentation concrète pourrait rester en infrastructure, alimentée par le YAML.
+Mon avis sur le code actuel
+Le code actuel est acceptable pour une API simple, parce que :
+le contrôle est fait très tôt, avant d’entrer dans le contrôleur
+Spring Security gère naturellement les 401 / 403
+la couche application reste focalisée sur la récupération de la personne
+Mais il y a un compromis : la règle “quelles familles sont autorisées pour quel client” est aujourd’hui portée par la couche présentation/security. Si cette règle est importante métier, auditée, testée indépendamment, ou réutilisable hors HTTP, alors oui, je la déplacerais vers la couche application.
+Ce que je recommanderais
+Je garderais Spring Security en présentation pour l’authentification et le mapping HTTP :
+ClientId header -> appelant identifié -> 401 / 403 HTTP
+Mais je déplacerais la décision métier d’accès aux familles vers l’application :
+appelant + familles demandées -> autorisé ou refusé
+En architecture propre, ça donnerait :
+presentation/security lit ClientId crée l’identité de l’appelant traduit les erreurs en 401/403 application vérifie que l’appelant a le droit d’accéder aux familles demandées exécute le cas d’usage infrastructure charge les droits depuis application.yml
+C’est probablement le meilleur équilibre : Spring Security reste là où il est fort, mais la règle d’autorisation ne reste pas prisonnière du web.
+
