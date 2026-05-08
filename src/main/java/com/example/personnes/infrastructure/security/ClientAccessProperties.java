@@ -1,4 +1,4 @@
-package com.example.personnes.presentation.security;
+package com.example.personnes.infrastructure.security;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

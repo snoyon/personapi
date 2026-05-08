@@ -3,9 +3,11 @@
 API Spring Boot organisee en quatre couches :
 
 - `presentation/api` : controleur REST, DTO de sortie et gestion des erreurs HTTP.
-- `application` : cas d'utilisation pour recuperer une personne selon les familles demandees.
+- `presentation/security` : integration Spring Security, lecture du header `ClientId` et traduction des refus en erreurs HTTP.
+- `application` : cas d'utilisation pour recuperer une personne et controle applicatif des droits par famille.
 - `domain` : modele metier, exceptions et port repository.
 - `infrastructure/persistence` : acces base de donnees via Spring Data JPA.
+- `infrastructure/security` : lecture des droits declares dans la configuration YAML.
 
 ## Lancer l'application
 
@@ -32,7 +34,7 @@ Si `data` est absent ou vide, toutes les familles sont retournees.
 
 Le header HTTP `ClientId` est obligatoire. Il contient l'identifiant unique de l'appelant transmis de maniere securisee par l'API manager en amont de l'API.
 
-Les droits d'acces aux familles de donnees sont portes par Spring Security et configures dans `src/main/resources/application.yml` :
+Les droits d'acces aux familles de donnees sont configures dans `src/main/resources/application.yml` :
 
 ```yaml
 personnes-api:

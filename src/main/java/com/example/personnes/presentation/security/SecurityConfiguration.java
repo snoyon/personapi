@@ -1,6 +1,7 @@
 package com.example.personnes.presentation.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.example.personnes.infrastructure.security.ClientAccessProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

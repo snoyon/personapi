@@ -1,5 +1,8 @@
 package com.example.personnes.presentation.security;
 
+import com.example.personnes.application.AppelantApi;
+import com.example.personnes.application.ControleAccesFamillesService;
+import com.example.personnes.application.ResultatControleAcces;
 import com.example.personnes.domain.model.FamilleDonnees;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.authorization.AuthorizationDecision;
@@ -17,10 +20,10 @@ import java.util.stream.Collectors;
 @Component
 class PersonneDataAuthorizationManager implements AuthorizationManager<RequestAuthorizationContext> {
 
-    private final ClientAccessProperties clientAccessProperties;
+    private final ControleAccesFamillesService controleAccesFamillesService;
 
-    PersonneDataAuthorizationManager(ClientAccessProperties clientAccessProperties) {
-        this.clientAccessProperties = clientAccessProperties;
+    PersonneDataAuthorizationManager(ControleAccesFamillesService controleAccesFamillesService) {
+        this.controleAccesFamillesService = controleAccesFamillesService;
     }
 
     @Override
@@ -34,31 +37,32 @@ class PersonneDataAuthorizationManager implements AuthorizationManager<RequestAu
         }
 
         String clientId = authentication.getName();
-        ClientAccessProperties.ClientAccess clientAccess = clientAccessProperties.getClients().get(clientId);
-        if (clientAccess == null) {
-            context.getRequest().setAttribute(SecurityErrorAttributes.ERROR_CODE, SecurityErrorAttributes.CLIENT_INCONNU);
-            return new AuthorizationDecision(false);
-        }
-
-        Set<String> famillesDemandees = parseFamillesDemandees(context.getRequest());
+        Set<FamilleDonnees> famillesDemandees = parseFamillesDemandees(context.getRequest());
         if (famillesDemandees == null) {
             return new AuthorizationDecision(true);
         }
 
-        boolean autorise = clientAccess.getFamillesAutorisees().containsAll(famillesDemandees);
-        if (!autorise) {
-            context.getRequest().setAttribute(SecurityErrorAttributes.ERROR_CODE, SecurityErrorAttributes.FAMILLE_INTERDITE);
-        }
+        ResultatControleAcces resultat = controleAccesFamillesService.controler(
+                new AppelantApi(clientId),
+                famillesDemandees
+        );
 
-        return new AuthorizationDecision(autorise);
+        return switch (resultat) {
+            case AUTORISE -> new AuthorizationDecision(true);
+            case CLIENT_INCONNU -> refuser(context, SecurityErrorAttributes.CLIENT_INCONNU);
+            case FAMILLE_INTERDITE -> refuser(context, SecurityErrorAttributes.FAMILLE_INTERDITE);
+        };
     }
 
-    private Set<String> parseFamillesDemandees(HttpServletRequest request) {
+    private AuthorizationDecision refuser(RequestAuthorizationContext context, String codeErreur) {
+        context.getRequest().setAttribute(SecurityErrorAttributes.ERROR_CODE, codeErreur);
+        return new AuthorizationDecision(false);
+    }
+
+    private Set<FamilleDonnees> parseFamillesDemandees(HttpServletRequest request) {
         String data = request.getParameter("data");
         if (data == null || data.isBlank()) {
-            return EnumSet.allOf(FamilleDonnees.class).stream()
-                    .map(FamilleDonnees::code)
-                    .collect(Collectors.toSet());
+            return EnumSet.allOf(FamilleDonnees.class);
         }
 
         Set<String> codes = Arrays.stream(data.split(","))
@@ -69,6 +73,12 @@ class PersonneDataAuthorizationManager implements AuthorizationManager<RequestAu
         boolean contientUneFamilleInconnue = codes.stream()
                 .anyMatch(code -> Arrays.stream(FamilleDonnees.values()).noneMatch(famille -> famille.code().equals(code)));
 
-        return contientUneFamilleInconnue ? null : codes;
+        if (contientUneFamilleInconnue) {
+            return null;
+        }
+
+        return codes.stream()
+                .map(FamilleDonnees::depuisCode)
+                .collect(Collectors.toSet());
     }
 }
