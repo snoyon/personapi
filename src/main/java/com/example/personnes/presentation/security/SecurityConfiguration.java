@@ -3,6 +3,7 @@ package com.example.personnes.presentation.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
@@ -10,12 +11,12 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 class SecurityConfiguration {
 
     @Bean
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
-            PersonneDataAuthorizationManager personneDataAuthorizationManager,
             ObjectMapper objectMapper
     ) throws Exception {
         return http
@@ -30,7 +31,7 @@ class SecurityConfiguration {
                 .addFilterBefore(new ClientIdAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/h2-console/**").permitAll()
-                        .requestMatchers("/personnes/**").access(personneDataAuthorizationManager)
+                        .requestMatchers("/personnes/**").authenticated()
                         .anyRequest().denyAll())
                 .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
                 .build();

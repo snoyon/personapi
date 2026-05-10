@@ -5,62 +5,59 @@ import com.example.personnes.application.ControleAccesFamillesService;
 import com.example.personnes.application.ResultatControleAcces;
 import com.example.personnes.domain.model.FamilleDonnees;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.security.authorization.AuthorizationDecision;
-import org.springframework.security.authorization.AuthorizationManager;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Set;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Component
-class PersonneDataAuthorizationManager implements AuthorizationManager<RequestAuthorizationContext> {
+public class PersonneAccessChecker {
 
     private final ControleAccesFamillesService controleAccesFamillesService;
 
-    PersonneDataAuthorizationManager(ControleAccesFamillesService controleAccesFamillesService) {
+    PersonneAccessChecker(ControleAccesFamillesService controleAccesFamillesService) {
         this.controleAccesFamillesService = controleAccesFamillesService;
     }
 
-    @Override
-    public AuthorizationDecision check(
-            Supplier<Authentication> authenticationSupplier,
-            RequestAuthorizationContext context
-    ) {
-        Authentication authentication = authenticationSupplier.get();
+    public boolean peutAcceder(Authentication authentication, String data) {
         if (authentication == null || !authentication.isAuthenticated()) {
-            return new AuthorizationDecision(false);
+            return false;
         }
 
-        String clientId = authentication.getName();
-        Set<FamilleDonnees> famillesDemandees = parseFamillesDemandees(context.getRequest());
+        Set<FamilleDonnees> famillesDemandees = parseFamillesDemandees(data);
         if (famillesDemandees == null) {
-            return new AuthorizationDecision(true);
+            return true;
         }
 
         ResultatControleAcces resultat = controleAccesFamillesService.controler(
-                new AppelantApi(clientId),
+                new AppelantApi(authentication.getName()),
                 famillesDemandees
         );
 
         return switch (resultat) {
-            case AUTORISE -> new AuthorizationDecision(true);
-            case CLIENT_INCONNU -> refuser(context, SecurityErrorAttributes.CLIENT_INCONNU);
-            case FAMILLE_INTERDITE -> refuser(context, SecurityErrorAttributes.FAMILLE_INTERDITE);
+            case AUTORISE -> true;
+            case CLIENT_INCONNU -> refuser(SecurityErrorAttributes.CLIENT_INCONNU);
+            case FAMILLE_INTERDITE -> refuser(SecurityErrorAttributes.FAMILLE_INTERDITE);
         };
     }
 
-    private AuthorizationDecision refuser(RequestAuthorizationContext context, String codeErreur) {
-        context.getRequest().setAttribute(SecurityErrorAttributes.ERROR_CODE, codeErreur);
-        return new AuthorizationDecision(false);
+    private boolean refuser(String codeErreur) {
+        currentRequest().setAttribute(SecurityErrorAttributes.ERROR_CODE, codeErreur);
+        return false;
     }
 
-    private Set<FamilleDonnees> parseFamillesDemandees(HttpServletRequest request) {
-        String data = request.getParameter("data");
+    private HttpServletRequest currentRequest() {
+        ServletRequestAttributes requestAttributes =
+                (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
+        return requestAttributes.getRequest();
+    }
+
+    private Set<FamilleDonnees> parseFamillesDemandees(String data) {
         if (data == null || data.isBlank()) {
             return EnumSet.allOf(FamilleDonnees.class);
         }

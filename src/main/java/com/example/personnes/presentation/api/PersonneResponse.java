@@ -7,7 +7,7 @@ import com.example.personnes.domain.model.Revenus;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-record PersonneResponse(
+public record PersonneResponse(
         Long id,
         Identite identite,
         Coordonnees coordonnees,

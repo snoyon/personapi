@@ -4,6 +4,8 @@ import com.example.personnes.application.AppelantApi;
 import com.example.personnes.application.PersonneApplicationService;
 import com.example.personnes.application.PersonneDemandee;
 import com.example.personnes.domain.model.FamilleDonnees;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -15,7 +17,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @RestController
-class PersonneController {
+public class PersonneController {
 
     private final PersonneApplicationService personneApplicationService;
 
@@ -24,10 +26,11 @@ class PersonneController {
     }
 
     @GetMapping("/personnes/{idPersonne}")
-    PersonneResponse recupererPersonne(
+    @PreAuthorize("@personneAccessChecker.peutAcceder(authentication, #data)")
+    public PersonneResponse recupererPersonne(
             @RequestHeader(name = "ClientId", required = false) String clientId,
             @PathVariable Long idPersonne,
-            @RequestParam(name = "data", required = false, defaultValue = "") String data
+            @P("data") @RequestParam(name = "data", required = false, defaultValue = "") String data
     ) {
         PersonneDemandee personne = personneApplicationService.recupererPersonne(
                 parseAppelantApi(clientId),
