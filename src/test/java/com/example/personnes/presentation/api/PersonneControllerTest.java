@@ -20,6 +20,7 @@ class PersonneControllerTest {
     @Test
     void recupereLesFamillesDemandees() throws Exception {
         mockMvc.perform(get("/personnes/1")
+                        .header("CN", "api-manager")
                         .header("ClientId", "client-mobile")
                         .param("data", "1,3"))
                 .andExpect(status().isOk())
@@ -31,7 +32,9 @@ class PersonneControllerTest {
 
     @Test
     void recupereToutesLesFamillesQuandDataEstAbsent() throws Exception {
-        mockMvc.perform(get("/personnes/1").header("ClientId", "client-mobile"))
+        mockMvc.perform(get("/personnes/1")
+                        .header("CN", "api-manager")
+                        .header("ClientId", "client-mobile"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.identite").exists())
                 .andExpect(jsonPath("$.coordonnees").exists())
@@ -41,7 +44,8 @@ class PersonneControllerTest {
     @Test
     void retourne404QuandLaPersonneEstIntrouvable() throws Exception {
         mockMvc.perform(get("/personnes/999")
-                .header("ClientId", "client-mobile")
+                        .header("CN", "api-manager")
+                        .header("ClientId", "client-mobile")
                         .param("data", "1"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("404.1"))
@@ -51,6 +55,7 @@ class PersonneControllerTest {
     @Test
     void retourne400QuandUneFamilleEstInconnue() throws Exception {
         mockMvc.perform(get("/personnes/1")
+                        .header("CN", "api-manager")
                         .header("ClientId", "client-mobile")
                         .param("data", "1,9"))
                 .andExpect(status().isBadRequest())
@@ -59,7 +64,7 @@ class PersonneControllerTest {
     }
 
     @Test
-    void retourne400QuandLeHeaderClientIdEstAbsent() throws Exception {
+    void retourne401QuandLeHeaderCnEstAbsent() throws Exception {
         mockMvc.perform(get("/personnes/1").param("data", "1"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("401.1"))
@@ -67,9 +72,9 @@ class PersonneControllerTest {
     }
 
     @Test
-    void retourne400QuandLeHeaderClientIdEstVide() throws Exception {
+    void retourne401QuandLeHeaderCnEstVide() throws Exception {
         mockMvc.perform(get("/personnes/1")
-                        .header("ClientId", " ")
+                        .header("CN", " ")
                         .param("data", "1"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("401.1"))
@@ -79,6 +84,7 @@ class PersonneControllerTest {
     @Test
     void retourne403QuandLeClientNaPasAccesAUneFamilleDemandee() throws Exception {
         mockMvc.perform(get("/personnes/1")
+                        .header("CN", "api-manager")
                         .header("ClientId", "client-partenaire-identite")
                         .param("data", "1,3"))
                 .andExpect(status().isForbidden())
@@ -89,10 +95,21 @@ class PersonneControllerTest {
     @Test
     void retourne403QuandLeClientEstInconnu() throws Exception {
         mockMvc.perform(get("/personnes/1")
+                        .header("CN", "api-manager")
                         .header("ClientId", "client-inconnu")
                         .param("data", "1"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("403.1"))
                 .andExpect(jsonPath("$.message").value("Forbidden"));
+    }
+
+    @Test
+    void recupereLesFamillesAutoriseesPourUnAppelDirectSansClientId() throws Exception {
+        mockMvc.perform(get("/personnes/1")
+                        .header("CN", "application-directe-rh")
+                        .param("data", "1,3"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.identite.nom").value("Dupont"))
+                .andExpect(jsonPath("$.revenus.salaireMensuel").value(3200.0));
     }
 }

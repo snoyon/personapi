@@ -18,13 +18,14 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-class ClientIdAuthenticationFilter extends OncePerRequestFilter {
+class AppelantAuthenticationFilter extends OncePerRequestFilter {
 
+    static final String CN_HEADER = "CN";
     static final String CLIENT_ID_HEADER = "ClientId";
 
     private final DroitsAccesFamillesRepository droitsAccesFamillesRepository;
 
-    ClientIdAuthenticationFilter(DroitsAccesFamillesRepository droitsAccesFamillesRepository) {
+    AppelantAuthenticationFilter(DroitsAccesFamillesRepository droitsAccesFamillesRepository) {
         this.droitsAccesFamillesRepository = droitsAccesFamillesRepository;
     }
 
@@ -34,17 +35,19 @@ class ClientIdAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
+        String cn = request.getHeader(CN_HEADER);
         String clientId = request.getHeader(CLIENT_ID_HEADER);
 
-        if (clientId != null && !clientId.isBlank()) {
-            String clientIdNormalise = clientId.trim();
+        if (cn != null && !cn.isBlank()) {
+            String cnNormalise = cn.trim();
+            String clientIdNormalise = normaliserClientId(clientId);
             List<GrantedAuthority> authorities = droitsAccesFamillesRepository
-                    .trouverFamillesAutorisees(new AppelantApi(clientIdNormalise))
+                    .trouverFamillesAutorisees(new AppelantApi(cnNormalise, clientIdNormalise))
                     .map(this::toAuthorities)
                     .orElseGet(() -> clientInconnu(request));
 
             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                    clientIdNormalise,
+                    principal(cnNormalise, clientIdNormalise),
                     null,
                     authorities
             );
@@ -52,6 +55,14 @@ class ClientIdAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private String normaliserClientId(String clientId) {
+        return clientId == null ? "" : clientId.trim();
+    }
+
+    private String principal(String cn, String clientId) {
+        return clientId.isBlank() ? cn : cn + "+" + clientId;
     }
 
     private List<GrantedAuthority> toAuthorities(Set<FamilleDonnees> famillesAutorisees) {

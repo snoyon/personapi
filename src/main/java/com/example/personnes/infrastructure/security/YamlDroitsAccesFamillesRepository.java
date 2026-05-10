@@ -20,9 +20,20 @@ class YamlDroitsAccesFamillesRepository implements DroitsAccesFamillesRepository
 
     @Override
     public Optional<Set<FamilleDonnees>> trouverFamillesAutorisees(AppelantApi appelantApi) {
-        return Optional.ofNullable(clientAccessProperties.getClients().get(appelantApi.clientId()))
+        return clientAccessProperties.getClients().stream()
+                .filter(clientAccess -> memeAppelant(clientAccess, appelantApi))
+                .findFirst()
                 .map(ClientAccessProperties.ClientAccess::getFamillesAutorisees)
                 .map(this::toFamillesDonnees);
+    }
+
+    private boolean memeAppelant(ClientAccessProperties.ClientAccess clientAccess, AppelantApi appelantApi) {
+        return normaliser(clientAccess.getCn()).equals(normaliser(appelantApi.cn()))
+                && normaliser(clientAccess.getClientId()).equals(normaliser(appelantApi.clientId()));
+    }
+
+    private String normaliser(String value) {
+        return value == null ? "" : value.trim();
     }
 
     private Set<FamilleDonnees> toFamillesDonnees(Set<String> codes) {

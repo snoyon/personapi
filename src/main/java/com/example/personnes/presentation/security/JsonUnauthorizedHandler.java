@@ -28,6 +28,6 @@ class JsonUnauthorizedHandler implements AuthenticationEntryPoint {
     ) throws IOException, ServletException {
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        objectMapper.writeValue(response.getWriter(), new ApiError(SecurityErrorAttributes.CLIENT_ID_ABSENT, "Unauthorized"));
+        objectMapper.writeValue(response.getWriter(), new ApiError(SecurityErrorAttributes.CN_ABSENT, "Unauthorized"));
     }
 }

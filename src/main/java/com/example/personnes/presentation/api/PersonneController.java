@@ -28,24 +28,25 @@ public class PersonneController {
     @GetMapping("/personnes/{idPersonne}")
     @PreAuthorize("@personneAccessChecker.hasRequestedAuthorities(authentication, #data)")
     public PersonneResponse recupererPersonne(
+            @RequestHeader(name = "CN", required = false) String cn,
             @RequestHeader(name = "ClientId", required = false) String clientId,
             @PathVariable Long idPersonne,
             @P("data") @RequestParam(name = "data", required = false, defaultValue = "") String data
     ) {
         PersonneDemandee personne = personneApplicationService.recupererPersonne(
-                parseAppelantApi(clientId),
+                parseAppelantApi(cn, clientId),
                 idPersonne,
                 parseFamilles(data)
         );
         return PersonneResponse.depuis(personne);
     }
 
-    private AppelantApi parseAppelantApi(String clientId) {
-        if (clientId == null || clientId.isBlank()) {
-            throw new HeaderClientIdInvalideException();
+    private AppelantApi parseAppelantApi(String cn, String clientId) {
+        if (cn == null || cn.isBlank()) {
+            throw new HeaderCnInvalideException();
         }
 
-        return new AppelantApi(clientId.trim());
+        return new AppelantApi(cn.trim(), clientId == null ? "" : clientId.trim());
     }
 
     private Set<FamilleDonnees> parseFamilles(String data) {

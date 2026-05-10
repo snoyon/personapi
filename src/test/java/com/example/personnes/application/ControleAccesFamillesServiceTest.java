@@ -26,7 +26,7 @@ class ControleAccesFamillesServiceTest {
 
     @Test
     void retourneAutoriseQuandToutesLesFamillesDemandeesSontAutorisees() {
-        AppelantApi appelantApi = new AppelantApi("client-rh");
+        AppelantApi appelantApi = new AppelantApi("api-manager", "client-rh");
         when(droitsAccesFamillesRepository.trouverFamillesAutorisees(appelantApi))
                 .thenReturn(Optional.of(Set.of(FamilleDonnees.IDENTITE, FamilleDonnees.REVENUS)));
 
@@ -41,7 +41,7 @@ class ControleAccesFamillesServiceTest {
 
     @Test
     void retourneFamilleInterditeQuandUneFamilleDemandeeNestPasAutorisee() {
-        AppelantApi appelantApi = new AppelantApi("client-partenaire-identite");
+        AppelantApi appelantApi = new AppelantApi("api-manager", "client-partenaire-identite");
         when(droitsAccesFamillesRepository.trouverFamillesAutorisees(appelantApi))
                 .thenReturn(Optional.of(Set.of(FamilleDonnees.IDENTITE)));
 
@@ -55,7 +55,7 @@ class ControleAccesFamillesServiceTest {
 
     @Test
     void retourneClientInconnuQuandAucunDroitNestDeclarePourLappelant() {
-        AppelantApi appelantApi = new AppelantApi("client-inconnu");
+        AppelantApi appelantApi = new AppelantApi("api-manager", "client-inconnu");
         when(droitsAccesFamillesRepository.trouverFamillesAutorisees(appelantApi))
                 .thenReturn(Optional.empty());
 

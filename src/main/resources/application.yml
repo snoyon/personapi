@@ -20,15 +20,22 @@ server:
 personnes-api:
   security:
     clients:
-      client-mobile:
+      - cn: api-manager
+        client-id: client-mobile
         familles-autorisees:
           - "1"
           - "2"
           - "3"
-      client-partenaire-identite:
+      - cn: api-manager
+        client-id: client-partenaire-identite
         familles-autorisees:
           - "1"
-      client-rh:
+      - cn: api-manager
+        client-id: client-rh
+        familles-autorisees:
+          - "1"
+          - "3"
+      - cn: application-directe-rh
         familles-autorisees:
           - "1"
           - "3"

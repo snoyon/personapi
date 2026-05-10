@@ -22,9 +22,9 @@ class PersonneExceptionHandler {
         return new ApiError("400.1", exception.getMessage());
     }
 
-    @ExceptionHandler(HeaderClientIdInvalideException.class)
+    @ExceptionHandler(HeaderCnInvalideException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    ApiError headerClientIdInvalide(HeaderClientIdInvalideException exception) {
+    ApiError headerCnInvalide(HeaderCnInvalideException exception) {
         return new ApiError("400.2", exception.getMessage());
     }
 }

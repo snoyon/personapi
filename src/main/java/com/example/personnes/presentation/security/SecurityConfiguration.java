@@ -31,7 +31,7 @@ class SecurityConfiguration {
                         .authenticationEntryPoint(new JsonUnauthorizedHandler(objectMapper))
                         .accessDeniedHandler(new JsonForbiddenHandler(objectMapper)))
                 .addFilterBefore(
-                        new ClientIdAuthenticationFilter(droitsAccesFamillesRepository),
+                        new AppelantAuthenticationFilter(droitsAccesFamillesRepository),
                         UsernamePasswordAuthenticationFilter.class
                 )
                 .authorizeHttpRequests(authorize -> authorize
