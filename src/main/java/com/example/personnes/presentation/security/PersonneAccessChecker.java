@@ -1,11 +1,9 @@
 package com.example.personnes.presentation.security;
 
-import com.example.personnes.application.AppelantApi;
-import com.example.personnes.application.ControleAccesFamillesService;
-import com.example.personnes.application.ResultatControleAcces;
 import com.example.personnes.domain.model.FamilleDonnees;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -18,14 +16,12 @@ import java.util.stream.Collectors;
 @Component
 public class PersonneAccessChecker {
 
-    private final ControleAccesFamillesService controleAccesFamillesService;
-
-    PersonneAccessChecker(ControleAccesFamillesService controleAccesFamillesService) {
-        this.controleAccesFamillesService = controleAccesFamillesService;
-    }
-
-    public boolean peutAcceder(Authentication authentication, String data) {
+    public boolean possedeLesFamillesDemandees(Authentication authentication, String data) {
         if (authentication == null || !authentication.isAuthenticated()) {
+            return false;
+        }
+
+        if (clientInconnu()) {
             return false;
         }
 
@@ -34,16 +30,21 @@ public class PersonneAccessChecker {
             return true;
         }
 
-        ResultatControleAcces resultat = controleAccesFamillesService.controler(
-                new AppelantApi(authentication.getName()),
-                famillesDemandees
-        );
+        Set<String> authorities = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toSet());
 
-        return switch (resultat) {
-            case AUTORISE -> true;
-            case CLIENT_INCONNU -> refuser(SecurityErrorAttributes.CLIENT_INCONNU);
-            case FAMILLE_INTERDITE -> refuser(SecurityErrorAttributes.FAMILLE_INTERDITE);
-        };
+        boolean autorise = famillesDemandees.stream()
+                .map(FamilleAuthority::depuis)
+                .allMatch(authorities::contains);
+
+        return autorise || refuser(SecurityErrorAttributes.FAMILLE_INTERDITE);
+    }
+
+    private boolean clientInconnu() {
+        return SecurityErrorAttributes.CLIENT_INCONNU.equals(
+                currentRequest().getAttribute(SecurityErrorAttributes.ERROR_CODE)
+        );
     }
 
     private boolean refuser(String codeErreur) {

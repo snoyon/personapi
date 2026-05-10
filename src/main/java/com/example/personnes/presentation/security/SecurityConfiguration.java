@@ -1,5 +1,6 @@
 package com.example.personnes.presentation.security;
 
+import com.example.personnes.application.port.DroitsAccesFamillesRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,6 +18,7 @@ class SecurityConfiguration {
     @Bean
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
+            DroitsAccesFamillesRepository droitsAccesFamillesRepository,
             ObjectMapper objectMapper
     ) throws Exception {
         return http
@@ -28,7 +30,10 @@ class SecurityConfiguration {
                 .exceptionHandling(exceptionHandling -> exceptionHandling
                         .authenticationEntryPoint(new JsonUnauthorizedHandler(objectMapper))
                         .accessDeniedHandler(new JsonForbiddenHandler(objectMapper)))
-                .addFilterBefore(new ClientIdAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(
+                        new ClientIdAuthenticationFilter(droitsAccesFamillesRepository),
+                        UsernamePasswordAuthenticationFilter.class
+                )
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/personnes/**").authenticated()

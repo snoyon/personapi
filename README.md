@@ -3,7 +3,7 @@
 API Spring Boot organisee en quatre couches :
 
 - `presentation/api` : controleur REST, DTO de sortie et gestion des erreurs HTTP.
-- `presentation/security` : integration Spring Security, lecture du header `ClientId`, controle d'acces par `@PreAuthorize` et traduction des refus en erreurs HTTP.
+- `presentation/security` : integration Spring Security, lecture du header `ClientId`, transformation des droits en authorities, controle d'acces par `@PreAuthorize` et traduction des refus en erreurs HTTP.
 - `application` : cas d'utilisation pour recuperer une personne et controle applicatif des droits par famille.
 - `domain` : modele metier, exceptions et port repository.
 - `infrastructure/persistence` : acces base de donnees via Spring Data JPA.
@@ -53,6 +53,12 @@ personnes-api:
           - "1"
           - "3"
 ```
+
+Au moment de l'authentification, ces droits sont transformes en authorities Spring Security :
+
+- famille `1` -> `FAMILLE_1`
+- famille `2` -> `FAMILLE_2`
+- famille `3` -> `FAMILLE_3`
 
 Les retours en erreur sont normalises au format suivant :
 
