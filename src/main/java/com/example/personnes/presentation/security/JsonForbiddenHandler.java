@@ -12,11 +12,11 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 
 import java.io.IOException;
 
-class JsonAccessDeniedHandler implements AccessDeniedHandler {
+class JsonForbiddenHandler implements AccessDeniedHandler {
 
     private final ObjectMapper objectMapper;
 
-    JsonAccessDeniedHandler(ObjectMapper objectMapper) {
+    JsonForbiddenHandler(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 

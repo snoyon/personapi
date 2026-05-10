@@ -1,8 +1,6 @@
 package com.example.personnes.presentation.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.example.personnes.infrastructure.security.ClientAccessProperties;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -12,7 +10,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
-@EnableConfigurationProperties(ClientAccessProperties.class)
 class SecurityConfiguration {
 
     @Bean
@@ -28,8 +25,8 @@ class SecurityConfiguration {
                 .logout(logout -> logout.disable())
                 .anonymous(anonymous -> anonymous.disable())
                 .exceptionHandling(exceptionHandling -> exceptionHandling
-                        .authenticationEntryPoint(new JsonAuthenticationEntryPoint(objectMapper))
-                        .accessDeniedHandler(new JsonAccessDeniedHandler(objectMapper)))
+                        .authenticationEntryPoint(new JsonUnauthorizedHandler(objectMapper))
+                        .accessDeniedHandler(new JsonForbiddenHandler(objectMapper)))
                 .addFilterBefore(new ClientIdAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/h2-console/**").permitAll()

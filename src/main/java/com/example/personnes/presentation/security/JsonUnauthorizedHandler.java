@@ -12,11 +12,11 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 
 import java.io.IOException;
 
-class JsonAuthenticationEntryPoint implements AuthenticationEntryPoint {
+class JsonUnauthorizedHandler implements AuthenticationEntryPoint {
 
     private final ObjectMapper objectMapper;
 
-    JsonAuthenticationEntryPoint(ObjectMapper objectMapper) {
+    JsonUnauthorizedHandler(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
