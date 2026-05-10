@@ -160,3 +160,10 @@ En architecture propre, ça donnerait :
 presentation/security lit ClientId crée l’identité de l’appelant traduit les erreurs en 401/403 application vérifie que l’appelant a le droit d’accéder aux familles demandées exécute le cas d’usage infrastructure charge les droits depuis application.yml
 C’est probablement le meilleur équilibre : Spring Security reste là où il est fort, mais la règle d’autorisation ne reste pas prisonnière du web.
 
+filtres -> ClientIdAuthenticationFilter
+security context -> Authentication
+authorization -> @PreAuthorize
+exception handling -> JsonUnauthorizedHandler / JsonForbiddenHandler
+tests -> MockMvc
+
+Utilisation de PreAuthorize : il faut activer @EnableMethodSecurity dans SecurityConfiguration.java, puis on peut annoter les méthodes du contrôleur avec @PreAuthorize("hasAuthority('FAMILLE_1') and hasAuthority('FAMILLE_3')") pour exiger que l’appelant ait les droits sur les familles 1 et 3. Les autorités sont définies dans le ClientIdAuthenticationFilter en fonction du clientId.
