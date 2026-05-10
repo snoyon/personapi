@@ -26,7 +26,7 @@ public class PersonneController {
     }
 
     @GetMapping("/personnes/{idPersonne}")
-    @PreAuthorize("@personneAccessChecker.possedeLesFamillesDemandees(authentication, #data)")
+    @PreAuthorize("@personneAccessChecker.hasRequestedAuthorities(authentication, #data)")
     public PersonneResponse recupererPersonne(
             @RequestHeader(name = "ClientId", required = false) String clientId,
             @PathVariable Long idPersonne,

@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 @Component
 public class PersonneAccessChecker {
 
-    public boolean possedeLesFamillesDemandees(Authentication authentication, String data) {
+    public boolean hasRequestedAuthorities(Authentication authentication, String data) {
         if (authentication == null || !authentication.isAuthenticated()) {
             return false;
         }
@@ -30,15 +30,17 @@ public class PersonneAccessChecker {
             return true;
         }
 
-        Set<String> authorities = authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.toSet());
-
         boolean autorise = famillesDemandees.stream()
                 .map(FamilleAuthority::depuis)
-                .allMatch(authorities::contains);
+                .allMatch(authority -> hasAuthority(authentication, authority));
 
         return autorise || refuser(SecurityErrorAttributes.FAMILLE_INTERDITE);
+    }
+
+    private boolean hasAuthority(Authentication authentication, String authority) {
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(authority::equals);
     }
 
     private boolean clientInconnu() {
