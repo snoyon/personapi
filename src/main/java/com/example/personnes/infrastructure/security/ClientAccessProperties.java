@@ -23,6 +23,7 @@ public class ClientAccessProperties {
     public static class ClientAccess {
         private String cn;
         private String clientId = "";
+        private String clientName;
         private Set<String> famillesAutorisees = new HashSet<>();
 
         public String getCn() {
@@ -39,6 +40,14 @@ public class ClientAccessProperties {
 
         public void setClientId(String clientId) {
             this.clientId = clientId;
+        }
+
+        public String getClientName() {
+            return clientName;
+        }
+
+        public void setClientName(String clientName) {
+            this.clientName = clientName;
         }
 
         public Set<String> getFamillesAutorisees() {

@@ -1,6 +1,7 @@
 package com.example.personnes.presentation.security;
 
 import com.example.personnes.application.AppelantApi;
+import com.example.personnes.application.DroitsAccesFamilles;
 import com.example.personnes.application.port.DroitsAccesFamillesRepository;
 import com.example.personnes.domain.model.FamilleDonnees;
 import jakarta.servlet.FilterChain;
@@ -41,13 +42,16 @@ class AppelantAuthenticationFilter extends OncePerRequestFilter {
         if (cn != null && !cn.isBlank()) {
             String cnNormalise = cn.trim();
             String clientIdNormalise = normaliserClientId(clientId);
-            List<GrantedAuthority> authorities = droitsAccesFamillesRepository
-                    .trouverFamillesAutorisees(new AppelantApi(cnNormalise, clientIdNormalise))
-                    .map(this::toAuthorities)
-                    .orElseGet(() -> clientInconnu(request));
+            AppelantApi appelantApi = new AppelantApi(cnNormalise, clientIdNormalise);
+            DroitsAccesFamilles droitsAcces = droitsAccesFamillesRepository
+                    .trouverDroitsAcces(appelantApi)
+                    .orElse(null);
+            List<GrantedAuthority> authorities = droitsAcces == null
+                    ? clientInconnu(request)
+                    : toAuthorities(droitsAcces.famillesAutorisees());
 
             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                    principal(cnNormalise, clientIdNormalise),
+                    principal(cnNormalise, clientIdNormalise, droitsAcces),
                     null,
                     authorities
             );
@@ -61,8 +65,9 @@ class AppelantAuthenticationFilter extends OncePerRequestFilter {
         return clientId == null ? "" : clientId.trim();
     }
 
-    private String principal(String cn, String clientId) {
-        return clientId.isBlank() ? cn : cn + "+" + clientId;
+    private AppelantPrincipal principal(String cn, String clientId, DroitsAccesFamilles droitsAcces) {
+        String clientName = droitsAcces == null ? "client-inconnu" : droitsAcces.clientName();
+        return new AppelantPrincipal(cn, clientId, clientName);
     }
 
     private List<GrantedAuthority> toAuthorities(Set<FamilleDonnees> famillesAutorisees) {

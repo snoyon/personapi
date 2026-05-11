@@ -4,7 +4,11 @@ import com.example.personnes.application.AppelantApi;
 import com.example.personnes.application.PersonneApplicationService;
 import com.example.personnes.application.PersonneDemandee;
 import com.example.personnes.domain.model.FamilleDonnees;
+import com.example.personnes.presentation.security.AppelantPrincipal;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,6 +23,8 @@ import java.util.stream.Collectors;
 @RestController
 public class PersonneController {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(PersonneController.class);
+
     private final PersonneApplicationService personneApplicationService;
 
     PersonneController(PersonneApplicationService personneApplicationService) {
@@ -31,14 +37,23 @@ public class PersonneController {
             @RequestHeader(name = "CN", required = false) String cn,
             @RequestHeader(name = "ClientId", required = false) String clientId,
             @PathVariable Long idPersonne,
-            @P("data") @RequestParam(name = "data", required = false, defaultValue = "") String data
+            @P("data") @RequestParam(name = "data", required = false, defaultValue = "") String data,
+            Authentication authentication
     ) {
+        LOGGER.info("Recuperation de la personne {} par le client {}", idPersonne, clientName(authentication));
+
         PersonneDemandee personne = personneApplicationService.recupererPersonne(
                 parseAppelantApi(cn, clientId),
                 idPersonne,
                 parseFamilles(data)
         );
         return PersonneResponse.depuis(personne);
+    }
+
+    private String clientName(Authentication authentication) {
+        return authentication.getPrincipal() instanceof AppelantPrincipal appelantPrincipal
+                ? appelantPrincipal.clientName()
+                : authentication.getName();
     }
 
     private AppelantApi parseAppelantApi(String cn, String clientId) {

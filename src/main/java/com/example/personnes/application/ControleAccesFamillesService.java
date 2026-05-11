@@ -16,8 +16,8 @@ public class ControleAccesFamillesService {
     }
 
     public ResultatControleAcces controler(AppelantApi appelantApi, Set<FamilleDonnees> famillesDemandees) {
-        return droitsAccesFamillesRepository.trouverFamillesAutorisees(appelantApi)
-                .map(famillesAutorisees -> controlerFamilles(famillesAutorisees, famillesDemandees))
+        return droitsAccesFamillesRepository.trouverDroitsAcces(appelantApi)
+                .map(droitsAcces -> controlerFamilles(droitsAcces.famillesAutorisees(), famillesDemandees))
                 .orElse(ResultatControleAcces.CLIENT_INCONNU);
     }
 

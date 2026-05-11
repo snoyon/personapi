@@ -1,6 +1,7 @@
 package com.example.personnes.infrastructure.security;
 
 import com.example.personnes.application.AppelantApi;
+import com.example.personnes.application.DroitsAccesFamilles;
 import com.example.personnes.application.port.DroitsAccesFamillesRepository;
 import com.example.personnes.domain.model.FamilleDonnees;
 import org.springframework.stereotype.Repository;
@@ -19,12 +20,18 @@ class YamlDroitsAccesFamillesRepository implements DroitsAccesFamillesRepository
     }
 
     @Override
-    public Optional<Set<FamilleDonnees>> trouverFamillesAutorisees(AppelantApi appelantApi) {
+    public Optional<DroitsAccesFamilles> trouverDroitsAcces(AppelantApi appelantApi) {
         return clientAccessProperties.getClients().stream()
                 .filter(clientAccess -> memeAppelant(clientAccess, appelantApi))
                 .findFirst()
-                .map(ClientAccessProperties.ClientAccess::getFamillesAutorisees)
-                .map(this::toFamillesDonnees);
+                .map(this::toDroitsAcces);
+    }
+
+    private DroitsAccesFamilles toDroitsAcces(ClientAccessProperties.ClientAccess clientAccess) {
+        return new DroitsAccesFamilles(
+                clientAccess.getClientName(),
+                toFamillesDonnees(clientAccess.getFamillesAutorisees())
+        );
     }
 
     private boolean memeAppelant(ClientAccessProperties.ClientAccess clientAccess, AppelantApi appelantApi) {

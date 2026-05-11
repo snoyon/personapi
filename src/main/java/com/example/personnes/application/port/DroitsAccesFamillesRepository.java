@@ -1,12 +1,11 @@
 package com.example.personnes.application.port;
 
 import com.example.personnes.application.AppelantApi;
-import com.example.personnes.domain.model.FamilleDonnees;
+import com.example.personnes.application.DroitsAccesFamilles;
 
 import java.util.Optional;
-import java.util.Set;
 
 public interface DroitsAccesFamillesRepository {
 
-    Optional<Set<FamilleDonnees>> trouverFamillesAutorisees(AppelantApi appelantApi);
+    Optional<DroitsAccesFamilles> trouverDroitsAcces(AppelantApi appelantApi);
 }

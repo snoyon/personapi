@@ -50,24 +50,30 @@ personnes-api:
     clients:
       - cn: api-manager
         client-id: client-mobile
+        client-name: Application Mobile
         familles-autorisees:
           - "1"
           - "2"
           - "3"
       - cn: api-manager
         client-id: client-partenaire-identite
+        client-name: Partenaire Identite
         familles-autorisees:
           - "1"
       - cn: api-manager
         client-id: client-rh
+        client-name: Application RH via API Manager
         familles-autorisees:
           - "1"
           - "3"
       - cn: application-directe-rh
+        client-name: Application RH directe
         familles-autorisees:
           - "1"
           - "3"
 ```
+
+`client-name` est le nom explicite du client. Il est associe de maniere unique a un couple `CN + ClientId` et il est loggue lors de l'appel a `GET /personnes/{idPersonne}`.
 
 Au moment de l'authentification, ces droits sont transformes en authorities Spring Security :
 

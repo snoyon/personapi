@@ -27,8 +27,11 @@ class ControleAccesFamillesServiceTest {
     @Test
     void retourneAutoriseQuandToutesLesFamillesDemandeesSontAutorisees() {
         AppelantApi appelantApi = new AppelantApi("api-manager", "client-rh");
-        when(droitsAccesFamillesRepository.trouverFamillesAutorisees(appelantApi))
-                .thenReturn(Optional.of(Set.of(FamilleDonnees.IDENTITE, FamilleDonnees.REVENUS)));
+        when(droitsAccesFamillesRepository.trouverDroitsAcces(appelantApi))
+                .thenReturn(Optional.of(new DroitsAccesFamilles(
+                        "Application RH via API Manager",
+                        Set.of(FamilleDonnees.IDENTITE, FamilleDonnees.REVENUS)
+                )));
 
         ResultatControleAcces resultat = controleAccesFamillesService.controler(
                 appelantApi,
@@ -36,14 +39,17 @@ class ControleAccesFamillesServiceTest {
         );
 
         assertThat(resultat).isEqualTo(ResultatControleAcces.AUTORISE);
-        verify(droitsAccesFamillesRepository).trouverFamillesAutorisees(appelantApi);
+        verify(droitsAccesFamillesRepository).trouverDroitsAcces(appelantApi);
     }
 
     @Test
     void retourneFamilleInterditeQuandUneFamilleDemandeeNestPasAutorisee() {
         AppelantApi appelantApi = new AppelantApi("api-manager", "client-partenaire-identite");
-        when(droitsAccesFamillesRepository.trouverFamillesAutorisees(appelantApi))
-                .thenReturn(Optional.of(Set.of(FamilleDonnees.IDENTITE)));
+        when(droitsAccesFamillesRepository.trouverDroitsAcces(appelantApi))
+                .thenReturn(Optional.of(new DroitsAccesFamilles(
+                        "Partenaire Identite",
+                        Set.of(FamilleDonnees.IDENTITE)
+                )));
 
         ResultatControleAcces resultat = controleAccesFamillesService.controler(
                 appelantApi,
@@ -56,7 +62,7 @@ class ControleAccesFamillesServiceTest {
     @Test
     void retourneClientInconnuQuandAucunDroitNestDeclarePourLappelant() {
         AppelantApi appelantApi = new AppelantApi("api-manager", "client-inconnu");
-        when(droitsAccesFamillesRepository.trouverFamillesAutorisees(appelantApi))
+        when(droitsAccesFamillesRepository.trouverDroitsAcces(appelantApi))
                 .thenReturn(Optional.empty());
 
         ResultatControleAcces resultat = controleAccesFamillesService.controler(
